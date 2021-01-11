@@ -188,3 +188,6 @@ When ARG is non-nil, ignore NoDisplay property in *.desktop files."
 		      (cdr (assq 'visible y))))
 		  t nil 'app-launcher nil nil)))
     (funcall app-launcher--action-function result)))
+
+;; Provide the app-launcher feature
+(provide 'app-launcher)
