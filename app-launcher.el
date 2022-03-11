@@ -152,7 +152,7 @@ This function always returns its elements in a stable order."
 (defun app-launcher--annotation-function-default (choice)
   "Default function to annotate the completion choices."
   (let ((str (cdr (assq 'comment (gethash choice app-launcher--cache)))))
-    (when str (concat " - " (propertize str 'face 'italic)))))
+    (when str (concat " - " (propertize str 'face 'completions-annotations)))))
 
 (defun app-launcher--action-function-default (selected)
   "Default function used to run the selected application."
