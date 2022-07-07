@@ -69,7 +69,7 @@ This function always returns its elements in a stable order."
     (dolist (dir app-launcher-apps-directories)
       (when (file-exists-p dir)
 	(let ((dir (file-name-as-directory dir)))
-	  (dolist (file (directory-files-recursively dir ".*\\.desktop$"))
+	  (dolist (file (directory-files-recursively dir ".*\\.desktop$" nil nil t))
 	    (let ((id (subst-char-in-string ?/ ?- (file-relative-name file dir))))
 	      (when (and (not (gethash id hash)) (file-readable-p file))
 		(push (cons id file) result)
