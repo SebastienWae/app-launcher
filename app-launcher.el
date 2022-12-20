@@ -105,7 +105,6 @@ This function always returns its elements in a stable order."
 
 	      (goto-char start)
 	      (unless (re-search-forward "^Name *= *\\(.+\\)$" end t)
-		(push file counsel-linux-apps-faulty)
 		(message "Warning: File %s has no Name" file)
 		(throw 'break nil))
 	      (setq name (match-string 1))
