@@ -193,16 +193,33 @@ When ARG is non-nil, ignore NoDisplay property in *.desktop files."
 		  t nil 'app-launcher nil nil)))
     (funcall app-launcher--action-function result)))
 
-;; register app-launcher-run-app in marginalia
-(with-eval-after-load "marginalia"
+;; add marginalia support
+(with-eval-after-load 'marginalia
   (add-to-list 'marginalia-prompt-categories '("\\<Run app\\>" . linux-app))
   (add-to-list 'marginalia-annotator-registry
                '(linux-app marginalia-annotate-linux-app builtin none))
   (defun marginalia-annotate-linux-app (cand)
-    (let* ((ann (app-launcher--annotation-function-marginalia cand))
-           (ann-width (string-width ann)))
-      (concat (propertize " " 'display `(space :align-to center))
+    (when-let* ((ann (app-launcher--annotation-function-marginalia cand)))
+      (concat (propertize " " 'display '(space :align-to center))
               (propertize ann 'face 'marginalia-documentation)))))
+
+;; add all-the-icons-completion support
+(with-eval-after-load 'all-the-icons-completion
+  (defun all-the-icons-completion-get-linux-app-icon (cand)
+    "Return the icon for the candidate CAND of completion category Linux app."
+    (let* ((name (downcase cand))
+           (icon (or (ignore-errors (all-the-icons-faicon name))
+                     (ignore-errors (all-the-icons-fileicon name)))))
+      (if icon
+          (concat icon " ")
+        (concat
+         (apply (car all-the-icons-default-file-icon) (cdr all-the-icons-default-file-icon))
+         " "))))
+  (defun app-launcher-all-the-icons-completion-get-icon (orig-func cand cat)
+    (if (eq cat 'linux-app)
+        (all-the-icons-completion-get-linux-app-icon cand)
+      (funcall orig-func cand cat)))
+  (advice-add 'all-the-icons-completion-get-icon :around #'app-launcher-all-the-icons-completion-get-icon))
 
 ;; Provide the app-launcher feature
 (provide 'app-launcher)
