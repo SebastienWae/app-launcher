@@ -153,6 +153,11 @@ This function always returns its elements in a stable order."
   (let ((str (cdr (assq 'comment (gethash choice app-launcher--cache)))))
     (when str (concat " - " (propertize str 'face 'completions-annotations)))))
 
+(defun app-launcher--annotation-function-marginalia (choice)
+  "Function to annotate the completion choices in marginalia."
+  (let ((str (cdr (assq 'comment (gethash choice app-launcher--cache)))))
+    (when str (propertize str 'face 'completions-annotations))))
+
 (defun app-launcher--action-function-default (selected)
   "Default function used to run the selected application."
   (let* ((exec (cdr (assq 'exec (gethash selected app-launcher--cache))))
@@ -187,6 +192,17 @@ When ARG is non-nil, ignore NoDisplay property in *.desktop files."
 		      (cdr (assq 'visible y))))
 		  t nil 'app-launcher nil nil)))
     (funcall app-launcher--action-function result)))
+
+;; register app-launcher-run-app in marginalia
+(with-eval-after-load "marginalia"
+  (add-to-list 'marginalia-prompt-categories '("\\<Run app\\>" . linux-app))
+  (add-to-list 'marginalia-annotator-registry
+               '(linux-app marginalia-annotate-linux-app builtin none))
+  (defun marginalia-annotate-linux-app (cand)
+    (let* ((ann (app-launcher--annotation-function-marginalia cand))
+           (ann-width (string-width ann)))
+      (concat (propertize " " 'display `(space :align-to center))
+              (propertize ann 'face 'marginalia-documentation)))))
 
 ;; Provide the app-launcher feature
 (provide 'app-launcher)
