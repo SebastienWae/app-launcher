@@ -131,7 +131,7 @@ This function always returns its elements in a stable order."
 	  (let ((start (re-search-forward "^\\[Desktop Entry\\] *$" nil t))
 		(end (re-search-forward "^\\[" nil t))
 		(visible t)
-		name comment exec icon)
+		name comment exec icon path)
 	    (catch 'break
 	      (unless start
 		(message "Warning: File %s has no [Desktop Entry] group" file)
@@ -154,6 +154,10 @@ This function always returns its elements in a stable order."
 	      (goto-char start)
 	      (when (re-search-forward "^Comment *= *\\(.+\\)$" end t)
 		(setq comment (match-string 1)))
+
+	      (goto-char start)
+	      (when (re-search-forward "^Path *= *\\(.+\\)$" end t)
+		(setq path (match-string 1)))
 
 	      (goto-char start)
 	      (unless (re-search-forward "^Exec *= *\\(.+\\)$" end t)
@@ -179,6 +183,7 @@ This function always returns its elements in a stable order."
                        `((name . ,name)
                          (file . ,file)
                          (exec . ,exec)
+                         (path . ,path)
                          (icon . ,icon)
                          (comment . ,comment)
                          (visible . ,visible))
@@ -209,7 +214,10 @@ This function always returns its elements in a stable order."
 				  (equal chunk "%F")
 				  (equal chunk "%u")
 				  (equal chunk "%f"))
-			(setq result (concat result chunk " ")))))))
+			(setq result (concat result chunk " "))))))
+         (default-directory
+          (or (cdr (assq 'path (gethash selected app-launcher--cache)))
+              default-directory)))
     (call-process-shell-command command nil 0 nil)))
 
 (defun app-launcher--affixate (align candidate)
