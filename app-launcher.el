@@ -203,23 +203,24 @@ When ARG is non-nil, ignore NoDisplay property in *.desktop files."
       (concat (propertize " " 'display '(space :align-to center))
               (propertize ann 'face 'marginalia-documentation)))))
 
-;; add all-the-icons-completion support
-(with-eval-after-load 'all-the-icons-completion
-  (defun all-the-icons-completion-get-linux-app-icon (cand)
+;; add nerd-icons-completion support
+(with-eval-after-load 'nerd-icons-completion
+  (defun nerd-icons-completion-get-linux-app-icon (cand)
     "Return the icon for the candidate CAND of completion category Linux app."
     (let* ((name (downcase cand))
-           (icon (or (ignore-errors (all-the-icons-faicon name))
-                     (ignore-errors (all-the-icons-fileicon name)))))
+           (icon (or (ignore-errors (nerd-icons-mdicon (format "nf-md-%s" name)))
+                     (ignore-errors (nerd-icons-sucicon (format "nf-seti-%s" name)))
+                     (ignore-errors (nerd-icons-sucicon (format "nf-custom-%s" name))))))
       (if icon
           (concat icon " ")
         (concat
-         (apply (car all-the-icons-default-file-icon) (cdr all-the-icons-default-file-icon))
+         (apply (car nerd-icons-default-file-icon) (cdr nerd-icons-default-file-icon))
          " "))))
-  (defun app-launcher-all-the-icons-completion-get-icon (orig-func cand cat)
+  (defun app-launcher-nerd-icons-completion-get-icon (orig-func cand cat)
     (if (eq cat 'linux-app)
-        (all-the-icons-completion-get-linux-app-icon cand)
+        (nerd-icons-completion-get-linux-app-icon cand)
       (funcall orig-func cand cat)))
-  (advice-add 'all-the-icons-completion-get-icon :around #'app-launcher-all-the-icons-completion-get-icon))
+  (advice-add 'nerd-icons-completion-get-icon :around #'app-launcher-nerd-icons-completion-get-icon))
 
 ;; Provide the app-launcher feature
 (provide 'app-launcher)
