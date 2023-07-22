@@ -203,24 +203,5 @@ When ARG is non-nil, ignore NoDisplay property in *.desktop files."
       (concat (propertize " " 'display '(space :align-to center))
               (propertize ann 'face 'marginalia-documentation)))))
 
-;; add nerd-icons-completion support
-(with-eval-after-load 'nerd-icons-completion
-  (defun nerd-icons-completion-get-linux-app-icon (cand)
-    "Return the icon for the candidate CAND of completion category Linux app."
-    (let* ((name (string-join (split-string (downcase cand)) "_"))
-           (icon (or (ignore-errors (nerd-icons-mdicon (format "nf-md-%s" name)))
-                     (ignore-errors (nerd-icons-sucicon (format "nf-seti-%s" name)))
-                     (ignore-errors (nerd-icons-sucicon (format "nf-custom-%s" name))))))
-      (if icon
-          (concat icon " ")
-        (concat
-         (apply (car nerd-icons-default-file-icon) (cdr nerd-icons-default-file-icon))
-         " "))))
-  (defun app-launcher-nerd-icons-completion-get-icon (orig-func cand cat)
-    (if (eq cat 'linux-app)
-        (nerd-icons-completion-get-linux-app-icon cand)
-      (funcall orig-func cand cat)))
-  (advice-add 'nerd-icons-completion-get-icon :around #'app-launcher-nerd-icons-completion-get-icon))
-
 ;; Provide the app-launcher feature
 (provide 'app-launcher)
