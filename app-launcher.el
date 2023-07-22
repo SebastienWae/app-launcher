@@ -207,7 +207,7 @@ When ARG is non-nil, ignore NoDisplay property in *.desktop files."
 (with-eval-after-load 'nerd-icons-completion
   (defun nerd-icons-completion-get-linux-app-icon (cand)
     "Return the icon for the candidate CAND of completion category Linux app."
-    (let* ((name (downcase cand))
+    (let* ((name (string-join (split-string (downcase cand)) "_"))
            (icon (or (ignore-errors (nerd-icons-mdicon (format "nf-md-%s" name)))
                      (ignore-errors (nerd-icons-sucicon (format "nf-seti-%s" name)))
                      (ignore-errors (nerd-icons-sucicon (format "nf-custom-%s" name))))))
