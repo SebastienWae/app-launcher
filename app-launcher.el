@@ -60,6 +60,16 @@
 (defvar app-launcher--cached-files nil
   "List of cached desktop files.")
 
+(defvar app-launcher--curr-max-name-len 0
+  "Current maximum length of an application name.")
+
+(defun app-launcher--name-len (name)
+  "Return the length of NAME and update `app-launcher--curr-max-name-len'."
+  (let ((len (length name)))
+    (when (> len app-launcher--curr-max-name-len)
+      (setq app-launcher--curr-max-name-len len))
+    len))
+
 (defun app-launcher-list-desktop-files ()
   "Return an alist of all Linux applications.
 Each list entry is a pair of (desktop-name . desktop-file).
@@ -130,7 +140,8 @@ This function always returns its elements in a stable order."
 		       (list (cons 'file file)
 			     (cons 'exec exec)
 			     (cons 'comment comment)
-			     (cons 'visible visible))
+			     (cons 'visible visible)
+                             (cons 'len (if visible (app-launcher--name-len name) 0)))
 		       hash))))))))
 
 (defun app-launcher-list-apps ()
@@ -151,8 +162,11 @@ This function always returns its elements in a stable order."
 
 (defun app-launcher--annotation-function-default (choice)
   "Default function to annotate the completion choices."
-  (let ((str (cdr (assq 'comment (gethash choice app-launcher--cache)))))
-    (when str (concat " - " (propertize str 'face 'completions-annotations)))))
+  (when-let ((str (cdr (assq 'comment (gethash choice app-launcher--cache))))
+             (len (cdr (assq 'len (gethash choice app-launcher--cache)))))
+    (concat
+     (make-string (- app-launcher--curr-max-name-len len -2) ?\s)
+     (propertize str 'face 'completions-annotations))))
 
 (defun app-launcher--action-function-default (selected)
   "Default function used to run the selected application."
