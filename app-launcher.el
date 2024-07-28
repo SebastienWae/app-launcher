@@ -165,7 +165,11 @@ This function always returns its elements in a stable order."
   (when-let ((str (cdr (assq 'comment (gethash choice app-launcher--cache))))
              (len (cdr (assq 'len (gethash choice app-launcher--cache)))))
     (concat
-     (make-string (- app-launcher--curr-max-name-len len -2) ?\s)
+     (make-string (+ 2 (if (or (bound-and-true-p vertico-mode)
+                               (bound-and-true-p ivy-mode))
+                           (- app-launcher--curr-max-name-len len)
+                         0))
+                  ?\s)
      (propertize str 'face 'completions-annotations))))
 
 (defun app-launcher--action-function-default (selected)
