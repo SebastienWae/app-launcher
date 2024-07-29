@@ -141,7 +141,7 @@ This function always returns its elements in a stable order."
 			     (cons 'exec exec)
 			     (cons 'comment comment)
 			     (cons 'visible visible)
-                             (cons 'len (if visible (app-launcher--name-len name) 0)))
+                             (cons 'len (app-launcher--name-len name)))
 		       hash))))))))
 
 (defun app-launcher-list-apps ()
