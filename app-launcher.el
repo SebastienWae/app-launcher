@@ -139,7 +139,7 @@ This function always returns its elements in a stable order."
 	      (puthash name
 		       (list (cons 'file file)
 			     (cons 'exec exec)
-			     (cons 'comment (or comment ""))
+			     (cons 'comment comment)
 			     (cons 'visible visible)
                              (cons 'len (app-launcher--name-len name)))
 		       hash))))))))
@@ -162,14 +162,15 @@ This function always returns its elements in a stable order."
 
 (defun app-launcher--annotation-function-default (choice)
   "Default function to annotate the completion choices."
-  (when-let ((str (cdr (assq 'comment (gethash choice app-launcher--cache))))
-             (len (cdr (assq 'len (gethash choice app-launcher--cache)))))
-    (concat
-     (make-string (+ 2 (if icomplete-mode
-                           0
-                         (- app-launcher--curr-max-name-len len)))
-                  ?\s)
-     (propertize str 'face 'completions-annotations))))
+  (let  ((str (cdr (assq 'comment (gethash choice app-launcher--cache))))
+         (len (cdr (assq 'len (gethash choice app-launcher--cache)))))
+    (if str
+        (concat (make-string (+ 2 (if icomplete-mode
+                                      0
+                                    (- app-launcher--curr-max-name-len len)))
+                             ?\s)
+                (propertize str 'face 'completions-annotations))
+      "")))
 
 (defun app-launcher--action-function-default (selected)
   "Default function used to run the selected application."
