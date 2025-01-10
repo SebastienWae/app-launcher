@@ -119,75 +119,38 @@ This function always returns its elements in a stable order."
 		(puthash id file hash)))))))
     result))
 
+(defun app-launcher--is-installed (tryexec)
+  "Check if TRYEXEC file is installed in the \"exec-path\"."
+  (or (not tryexec)
+      (locate-file tryexec exec-path nil #'file-executable-p)))
+
 (defun app-launcher-parse-files (files)
   "Parse the .desktop FILES to return usable informations."
   (let ((hash (make-hash-table :test #'equal))
         (iconpath (app-launcher--icon-path)))
     (dolist (entry files hash)
-      (let ((file (cdr entry)))
-	(with-temp-buffer
-	  (insert-file-contents file)
-	  (goto-char (point-min))
-	  (let ((start (re-search-forward "^\\[Desktop Entry\\] *$" nil t))
-		(end (re-search-forward "^\\[" nil t))
-		(visible t)
-		name comment exec icon path)
-	    (catch 'break
-	      (unless start
-		(message "Warning: File %s has no [Desktop Entry] group" file)
-		(throw 'break nil))
+      (when-let* ((file (cdr entry))
+                  (parsed (xdg-desktop-read-file file))
+                  (name (gethash "Name" parsed))
+                  (exec (gethash "Exec" parsed))
+                  ((string= (gethash "Type" parsed) "Application"))
+                  ((app-launcher--is-installed (gethash "TryExec" parsed))))
 
-	      (goto-char start)
-	      (when (re-search-forward "^\\(Hidden\\|NoDisplay\\) *= *\\(1\\|true\\) *$" end t)
-		(setq visible nil))
+        (let ((path (gethash "Path" parsed))
+              (comment (gethash "Comment" parsed))
+              (icon (gethash "Icon" parsed))
+              (hidden (string= "true" (gethash "Hidden" parsed)))
+              (nodisplay (string= "true" (gethash "NoDisplay" parsed))))
 
-	      (goto-char start)
-	      (unless (re-search-forward "^Type *= *Application *$" end t)
-		(throw 'break nil))
-
-	      (goto-char start)
-	      (unless (re-search-forward "^Name *= *\\(.+\\)$" end t)
-		(message "Warning: File %s has no Name" file)
-		(throw 'break nil))
-	      (setq name (match-string 1))
-
-	      (goto-char start)
-	      (when (re-search-forward "^Comment *= *\\(.+\\)$" end t)
-		(setq comment (match-string 1)))
-
-	      (goto-char start)
-	      (when (re-search-forward "^Path *= *\\(.+\\)$" end t)
-		(setq path (match-string 1)))
-
-	      (goto-char start)
-	      (unless (re-search-forward "^Exec *= *\\(.+\\)$" end t)
-		;; Don't warn because this can technically be a valid desktop file.
-		(throw 'break nil))
-	      (setq exec (match-string 1))
-
-	      (goto-char start)
-	      (when (re-search-forward "^TryExec *= *\\(.+\\)$" end t)
-		(let ((try-exec (match-string 1)))
-		  (unless (locate-file try-exec exec-path nil #'file-executable-p)
-		    (throw 'break nil))))
-
-              (when iconpath
-                (goto-char start)
-                (setq icon (propertize
-                            " " 'display
-                            (or (and (re-search-forward "^Icon *= *\\(.+\\)$" end t)
-                                     (app-launcher--get-icon iconpath (match-string 1)))
-                                '(space :width height)))))
-
-              (puthash name
-                       `((name . ,name)
-                         (file . ,file)
-                         (exec . ,exec)
-                         (path . ,path)
-                         (icon . ,icon)
-                         (comment . ,comment)
-                         (visible . ,visible))
-                       hash))))))))
+          (puthash name
+                   `((name . ,name)
+                     (file . ,file)
+                     (exec . ,exec)
+                     (path . ,path)
+                     (icon . ,(and iconpath icon (app-launcher--get-icon iconpath icon)))
+                     (comment . ,comment)
+                     (visible . ,(not (or hidden nodisplay))))
+                   hash))))))
 
 (defun app-launcher-list-apps ()
   "Return list of all Linux .desktop applications."
@@ -224,7 +187,9 @@ This function always returns its elements in a stable order."
   "Return the annotated CANDIDATE with the description aligned to ALIGN."
   (let-alist candidate
     (list .name
-          (when .icon (concat .icon " "))
+          (concat
+           (propertize " " 'display (or .icon '(space :width height)))
+           " ")
           (if .comment
               (concat (propertize " " 'display `(space :align-to ,align))
                       " "
