@@ -4,6 +4,20 @@
 ~app-launcher~ define the ~app-launcher-run-app~ command which uses Emacs 
 standard completion feature to select an application installed on your machine and launch it.
 
+
+** How to install using Emacs' built-in ~use-package~
+If you're using Emacs version 30 or later, you can leverage the built-in ~use-package~ 
+with the new ~:vc~ option:
+
+#+BEGIN_SRC emacs-lisp
+(use-package app-launcher
+  :vc (:url "https://github.com/SebastienWae/app-launcher"
+       :branch "main")
+  :ensure t
+  :commands (app-launcher-run-app))
+#+END_SRC
+
+
 ** How to install with ~straight.el~
 #+BEGIN_SRC elisp
 (straight-use-package
