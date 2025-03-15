@@ -99,10 +99,9 @@
 (defun app-launcher--get-icon (path icon)
   "Find the requested ICON in the requested PATH."
   (when-let* ((icon-file (locate-file icon path app-launcher-icon-extensions)))
-    (propertize " " 'display (create-image icon-file nil nil
-                                           :ascent 'center
-                                           :scale 1.0
-                                           :height '(1.0 . ch)))))
+    (create-image icon-file nil nil :ascent 'center
+                  :scale 1.0
+                  :height '(1.0 . ch))))
 
 (defun app-launcher-list-desktop-files ()
   "Return an alist of all Linux applications.
@@ -170,9 +169,13 @@ This function always returns its elements in a stable order."
 		  (unless (locate-file try-exec exec-path nil #'file-executable-p)
 		    (throw 'break nil))))
 
-	      (goto-char start)
-	      (when (re-search-forward "^Icon *= *\\(.+\\)$" end t)
-                (setq icon (app-launcher--get-icon iconpath (match-string 1))))
+              (when iconpath
+                (goto-char start)
+                (setq icon (propertize
+                            " " 'display
+                            (or (and (re-search-forward "^Icon *= *\\(.+\\)$" end t)
+                                     (app-launcher--get-icon iconpath (match-string 1)))
+                                '(space :width height)))))
 
 	      (puthash name
 		       (list (cons 'file file)
@@ -214,11 +217,8 @@ This function always returns its elements in a stable order."
   "Return the annotated CANDIDATE with the description aligned to ALIGN."
   (let ((props (gethash candidate app-launcher--cache)))
     (list candidate
-          (concat
-           (if-let* ((icon (alist-get 'icon props)))
-               icon
-             (propertize " " 'display '(space :width height)))
-           " ")
+          (when-let* ((icon (alist-get 'icon props)))
+            (concat icon " "))
           (if-let* ((comment (alist-get 'comment props)))
               (concat (propertize " " 'display `(space :align-to ,align))
                       " "
