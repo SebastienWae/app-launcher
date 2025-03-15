@@ -177,13 +177,14 @@ This function always returns its elements in a stable order."
                                      (app-launcher--get-icon iconpath (match-string 1)))
                                 '(space :width height)))))
 
-	      (puthash name
-		       (list (cons 'file file)
-			     (cons 'exec exec)
-                             (cons 'icon icon)
-			     (cons 'comment comment)
-			     (cons 'visible visible))
-		       hash))))))))
+              (puthash name
+                       `((name . ,name)
+                         (file . ,file)
+                         (exec . ,exec)
+                         (icon . ,icon)
+                         (comment . ,comment)
+                         (visible . ,visible))
+                       hash))))))))
 
 (defun app-launcher-list-apps ()
   "Return list of all Linux .desktop applications."
@@ -203,7 +204,7 @@ This function always returns its elements in a stable order."
 
 (defun app-launcher--action-function-default (selected)
   "Default function used to run the SELECTED application."
-  (let* ((exec (cdr (assq 'exec (gethash selected app-launcher--cache))))
+  (let* ((exec (alist-get 'exec selected))
 	 (command (let (result)
 		    (dolist (chunk (split-string exec " ") result)
 		      (unless (or (equal chunk "%U")
@@ -237,17 +238,17 @@ This function always returns its elements in a stable order."
   "Launch an application installed on your machine.
 When ARG is non-nil, ignore NoDisplay property in *.desktop files."
   (interactive)
-  (let* ((candidates
-          (completion-table-with-metadata
-           (app-launcher-list-apps)
-           `((affixation-function . ,(app-launcher--make-affixation-fn))
-             (category . app-launcher))))
+  (let* ((candidates (app-launcher-list-apps))
+         (table (completion-table-with-metadata
+                 candidates
+                 `((affixation-function . ,(app-launcher--make-affixation-fn))
+                   (category . app-launcher))))
          (result (completing-read
                   "Run app: "
-                  candidates
+                  table
                   (lambda (_ y) (if arg t (cdr (assq 'visible y))))
                   t nil 'app-launcher nil nil)))
-    (funcall app-launcher--action-function result)))
+    (funcall app-launcher--action-function (gethash result candidates))))
 
 ;; Provide the app-launcher feature
 (provide 'app-launcher)
