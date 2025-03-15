@@ -1,4 +1,4 @@
-;;; app-launcher.el --- Launch applications from Emacs -*- lexical-binding: t -*-
+;;; app-launcher.el --- Launch applications -*- lexical-binding: t -*-
 
 ;; Author: Sebastien Waegeneire
 ;; Created: 2020
@@ -33,8 +33,15 @@
 ;; This package uses code from the Counsel package by Oleh Krehel.
 ;; https://github.com/abo-abo/swiper
 
+;;; Code:
+
 (require 'xdg)
-(require 'cl-seq)
+(require 'cl-lib)
+
+(defgroup app-launcher nil
+  "Customizable options for the `app-launcher' package."
+  :group 'tools
+  :prefix "app-launcher")
 
 (defcustom app-launcher-apps-directories
   (mapcar (lambda (dir) (expand-file-name "applications" dir))
@@ -43,13 +50,15 @@
   "Directories in which to search for applications (.desktop files)."
   :type '(repeat directory))
 
-(defcustom app-launcher--annotation-function #'app-launcher--annotation-function-default
-  "Define the function that genereate the annotation for each completion choices."
-  :type 'function)
-
 (defcustom app-launcher--action-function #'app-launcher--action-function-default
   "Define the function that is used to run the selected application."
   :type 'function)
+
+(defcustom app-launcher-icon-themes '("Papirus" "Adwaita" "hicolor")
+  "Icon themes to use for app icons in priority order."
+  :type '(choice
+          (const :tag "None" nil)
+          (repeat :tag "Path" string)))
 
 (defvar app-launcher--cache nil
   "Cache of desktop files data.")
@@ -59,6 +68,41 @@
 
 (defvar app-launcher--cached-files nil
   "List of cached desktop files.")
+
+(defconst app-launcher--icon-sizes '("scalable" "22x22" "24x24" "32x32" "36x36"
+                                     "48x48" "64x64" "72x72" "96x96" "128x128"
+                                     "192x192" "256x256" "512x512" "16x16")
+  "An list of possible icon-size directory names, ordered by preference.")
+
+(defvar app-launcher-icons-directories
+  (mapcar (lambda (dir) (expand-file-name "icons" dir))
+          (cons (xdg-data-home)
+                (xdg-data-dirs)))
+  "Directories to search for icon themes.")
+
+(defvar app-launcher-icon-extensions '(".svg" ".png")
+  "Icon extensions to use for application icons in priority order.")
+
+(defun app-launcher--icon-path ()
+  "Return a list of directories to search for icons, in priority order."
+  (let (search-path)
+    (dolist (theme app-launcher-icon-themes)
+      (dolist (dir app-launcher-icons-directories)
+        (when-let* ((themedir (expand-file-name theme dir))
+                    (file-directory-p themedir))
+          (dolist (size app-launcher--icon-sizes)
+            (when-let* ((path (expand-file-name (concat size "/apps/") themedir))
+                        (file-directory-p path))
+              (push path search-path))))))
+    (nreverse search-path)))
+
+(defun app-launcher--get-icon (path icon)
+  "Find the requested ICON in the requested PATH."
+  (when-let* ((icon-file (locate-file icon path app-launcher-icon-extensions)))
+    (propertize " " 'display (create-image icon-file nil nil
+                                           :ascent 'center
+                                           :scale 1.0
+                                           :height '(1.0 . ch)))))
 
 (defun app-launcher-list-desktop-files ()
   "Return an alist of all Linux applications.
@@ -77,8 +121,9 @@ This function always returns its elements in a stable order."
     result))
 
 (defun app-launcher-parse-files (files)
-  "Parse the .desktop files to return usable informations."
-  (let ((hash (make-hash-table :test #'equal)))
+  "Parse the .desktop FILES to return usable informations."
+  (let ((hash (make-hash-table :test #'equal))
+        (iconpath (app-launcher--icon-path)))
     (dolist (entry files hash)
       (let ((file (cdr entry)))
 	(with-temp-buffer
@@ -87,7 +132,7 @@ This function always returns its elements in a stable order."
 	  (let ((start (re-search-forward "^\\[Desktop Entry\\] *$" nil t))
 		(end (re-search-forward "^\\[" nil t))
 		(visible t)
-		name comment exec)
+		name comment exec icon)
 	    (catch 'break
 	      (unless start
 		(message "Warning: File %s has no [Desktop Entry] group" file)
@@ -125,9 +170,14 @@ This function always returns its elements in a stable order."
 		  (unless (locate-file try-exec exec-path nil #'file-executable-p)
 		    (throw 'break nil))))
 
+	      (goto-char start)
+	      (when (re-search-forward "^Icon *= *\\(.+\\)$" end t)
+                (setq icon (app-launcher--get-icon iconpath (match-string 1))))
+
 	      (puthash name
 		       (list (cons 'file file)
 			     (cons 'exec exec)
+                             (cons 'icon icon)
 			     (cons 'comment comment)
 			     (cons 'visible visible))
 		       hash))))))))
@@ -148,18 +198,8 @@ This function always returns its elements in a stable order."
       (setq app-launcher--cached-files new-files)))
   app-launcher--cache)
 
-(defun app-launcher--annotation-function-default (choice)
-  "Default function to annotate the completion choices."
-  (let ((str (cdr (assq 'comment (gethash choice app-launcher--cache)))))
-    (when str (concat " - " (propertize str 'face 'completions-annotations)))))
-
-(defun app-launcher--annotation-function-marginalia (choice)
-  "Function to annotate the completion choices in marginalia."
-  (let ((str (cdr (assq 'comment (gethash choice app-launcher--cache)))))
-    (when str (propertize str 'face 'completions-annotations))))
-
 (defun app-launcher--action-function-default (selected)
-  "Default function used to run the selected application."
+  "Default function used to run the SELECTED application."
   (let* ((exec (cdr (assq 'exec (gethash selected app-launcher--cache))))
 	 (command (let (result)
 		    (dolist (chunk (split-string exec " ") result)
@@ -170,38 +210,45 @@ This function always returns its elements in a stable order."
 			(setq result (concat result chunk " ")))))))
     (call-process-shell-command command nil 0 nil)))
 
+(defun app-launcher--affixate (align candidate)
+  "Return the annotated CANDIDATE with the description aligned to ALIGN."
+  (let ((props (gethash candidate app-launcher--cache)))
+    (list candidate
+          (concat
+           (if-let* ((icon (alist-get 'icon props)))
+               icon
+             (propertize " " 'display '(space :width height)))
+           " ")
+          (if-let* ((comment (alist-get 'comment props)))
+              (concat (propertize " " 'display `(space :align-to ,align))
+                      " "
+                      (propertize comment 'face 'completions-annotations))
+            ""))))
+
+(defun app-launcher--make-affixation-fn ()
+  "Return an affixation function for `app-launcher' completions."
+  (let ((col 20))
+    (lambda (completions)
+      (setq col (max col (or (cl-loop for c in completions maximize (+ 10 (string-width c))) 0)))
+      (mapcar (apply-partially #'app-launcher--affixate col) completions))))
+
 ;;;###autoload
 (defun app-launcher-run-app (&optional arg)
   "Launch an application installed on your machine.
 When ARG is non-nil, ignore NoDisplay property in *.desktop files."
   (interactive)
-  (let* ((candidates (app-launcher-list-apps))
-	 (result (completing-read
-		  "Run app: "
-		  (lambda (str pred flag)
-		    (if (eq flag 'metadata)
-			'(metadata
-			  (annotation-function . (lambda (choice)
-						   (funcall
-						    app-launcher--annotation-function
-						    choice))))
-		      (complete-with-action flag candidates str pred)))
-		  (lambda (x y)
-		    (if arg
-			t
-		      (cdr (assq 'visible y))))
-		  t nil 'app-launcher nil nil)))
+  (let* ((candidates
+          (completion-table-with-metadata
+           (app-launcher-list-apps)
+           `((affixation-function . ,(app-launcher--make-affixation-fn)))))
+         (result (completing-read
+                  "Run app: "
+                  candidates
+                  (lambda (_ y) (if arg t (cdr (assq 'visible y))))
+                  t nil 'app-launcher nil nil)))
     (funcall app-launcher--action-function result)))
-
-;; add marginalia support
-(with-eval-after-load 'marginalia
-  (add-to-list 'marginalia-prompt-categories '("\\<Run app\\>" . linux-app))
-  (add-to-list 'marginalia-annotator-registry
-               '(linux-app marginalia-annotate-linux-app builtin none))
-  (defun marginalia-annotate-linux-app (cand)
-    (when-let* ((ann (app-launcher--annotation-function-marginalia cand)))
-      (concat (propertize " " 'display '(space :align-to center))
-              (propertize ann 'face 'marginalia-documentation)))))
 
 ;; Provide the app-launcher feature
 (provide 'app-launcher)
+
+;;; app-launcher.el ends here
