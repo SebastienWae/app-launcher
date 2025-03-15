@@ -240,7 +240,8 @@ When ARG is non-nil, ignore NoDisplay property in *.desktop files."
   (let* ((candidates
           (completion-table-with-metadata
            (app-launcher-list-apps)
-           `((affixation-function . ,(app-launcher--make-affixation-fn)))))
+           `((affixation-function . ,(app-launcher--make-affixation-fn))
+             (category . app-launcher))))
          (result (completing-read
                   "Run app: "
                   candidates
