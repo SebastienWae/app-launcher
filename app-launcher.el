@@ -216,22 +216,21 @@ This function always returns its elements in a stable order."
 
 (defun app-launcher--affixate (align candidate)
   "Return the annotated CANDIDATE with the description aligned to ALIGN."
-  (let ((props (gethash candidate app-launcher--cache)))
-    (list candidate
-          (when-let* ((icon (alist-get 'icon props)))
-            (concat icon " "))
-          (if-let* ((comment (alist-get 'comment props)))
+  (let-alist candidate
+    (list .name
+          (when .icon (concat .icon " "))
+          (if .comment
               (concat (propertize " " 'display `(space :align-to ,align))
                       " "
-                      (propertize comment 'face 'completions-annotations))
+                      (propertize .comment 'face 'completions-annotations))
             ""))))
 
-(defun app-launcher--make-affixation-fn ()
+(defun app-launcher--make-affixation-fn (table)
   "Return an affixation function for `app-launcher' completions."
   (let ((col 20))
     (lambda (completions)
       (setq col (max col (or (cl-loop for c in completions maximize (+ 10 (string-width c))) 0)))
-      (mapcar (apply-partially #'app-launcher--affixate col) completions))))
+      (mapcar (lambda (c) (app-launcher--affixate col (gethash c table))) completions))))
 
 ;;;###autoload
 (defun app-launcher-run-app (&optional arg)
@@ -241,7 +240,7 @@ When ARG is non-nil, ignore NoDisplay property in *.desktop files."
   (let* ((candidates (app-launcher-list-apps))
          (table (completion-table-with-metadata
                  candidates
-                 `((affixation-function . ,(app-launcher--make-affixation-fn))
+                 `((affixation-function . ,(app-launcher--make-affixation-fn candidates))
                    (category . app-launcher))))
          (result (completing-read
                   "Run app: "
