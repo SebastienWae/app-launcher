@@ -38,6 +38,16 @@
 (require 'xdg)
 (require 'cl-lib)
 
+(when (version< emacs-version "31.1")
+  (defun completion-table-with-metadata (table metadata)
+    "Return new completion TABLE with METADATA.
+METADATA should be an alist of completion metadata.  See
+`completion-metadata' for a list of supported metadata."
+    (lambda (string pred action)
+      (if (eq action 'metadata)
+          `(metadata . ,metadata)
+        (complete-with-action action table string pred)))))
+
 (defgroup app-launcher nil
   "Customizable options for the `app-launcher' package."
   :group 'tools
