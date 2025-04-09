@@ -98,7 +98,9 @@
 
 (defun app-launcher--get-icon (path icon)
   "Find the requested ICON in the requested PATH."
-  (when-let* ((icon-file (locate-file icon path app-launcher-icon-extensions)))
+  (when-let* ((icon-file (if (and (file-name-absolute-p icon) (file-exists-p icon))
+                             icon
+                           (locate-file icon path app-launcher-icon-extensions))))
     (create-image icon-file nil nil :ascent 'center
                   :scale 1.0
                   :height '(1.0 . ch))))
