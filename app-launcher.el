@@ -50,7 +50,7 @@
   "Directories in which to search for applications (.desktop files)."
   :type '(repeat directory))
 
-(defcustom app-launcher--action-function #'app-launcher--action-function-default
+(defcustom app-launcher-action-function #'app-launcher-action-function-default
   "Define the function that is used to run the selected application."
   :type 'function)
 
@@ -200,7 +200,7 @@ This function always returns its elements in a stable order."
       (setq app-launcher--cached-files new-files)))
   app-launcher--cache)
 
-(defun app-launcher--action-function-default (selected)
+(defun app-launcher-action-function-default (selected)
   "Default function used to run the SELECTED application."
   (let* ((exec (alist-get 'exec selected))
 	 (command (let (result)
@@ -245,7 +245,7 @@ When ARG is non-nil, ignore NoDisplay property in *.desktop files."
                   table
                   (lambda (_ y) (if arg t (cdr (assq 'visible y))))
                   t nil 'app-launcher nil nil)))
-    (funcall app-launcher--action-function (gethash result candidates))))
+    (funcall app-launcher-action-function (gethash result candidates))))
 
 ;; Provide the app-launcher feature
 (provide 'app-launcher)
