@@ -140,12 +140,10 @@ This function always returns its elements in a stable order."
 	      (goto-char start)
 	      (when (re-search-forward "^\\(Hidden\\|NoDisplay\\) *= *\\(1\\|true\\) *$" end t)
 		(setq visible nil))
-	      (setq name (match-string 1))
 
 	      (goto-char start)
 	      (unless (re-search-forward "^Type *= *Application *$" end t)
 		(throw 'break nil))
-	      (setq name (match-string 1))
 
 	      (goto-char start)
 	      (unless (re-search-forward "^Name *= *\\(.+\\)$" end t)
