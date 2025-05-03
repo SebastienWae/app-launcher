@@ -219,7 +219,7 @@ This function always returns its elements in a stable order."
 (defun app-launcher-run-app (&optional arg)
   "Launch an application installed on your machine.
 When ARG is non-nil, ignore NoDisplay property in *.desktop files."
-  (interactive)
+  (interactive "P")
   (let* ((candidates (app-launcher-list-apps))
          (table (completion-table-with-metadata
                  candidates
