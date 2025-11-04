@@ -1,5 +1,5 @@
 > [!CAUTION]
-> This repo is no longer maintained, use [emacs-exwm/xdg-launcher](emacs-exwm/xdg-launcher)
+> This repo is no longer maintained, use [emacs-exwm/xdg-launcher](https://github.com/emacs-exwm/xdg-launcher)
 
 # app-launcher
 
